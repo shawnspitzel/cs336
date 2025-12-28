@@ -6,6 +6,7 @@ from typing import IO, Any, BinaryIO
 
 from cs336_basics.model.attention import MultiHeadAttention
 from cs336_basics.model.loss import cross_entropy_loss, gradient_clipping, learning_rate_schedule
+from cs336_basics.training.loader import data_loading
 from cs336_basics.model.mlp import FeedForward
 from cs336_basics.model.norms import RMSNorm
 from cs336_basics.model.embeddings import RotaryPositionalEmbedding
@@ -464,7 +465,7 @@ def run_get_batch(
         is the sampled input sequences, and the second tuple item is the corresponding
         language modeling labels.
     """
-    raise NotImplementedError
+    return data_loading(dataset, batch_size=batch_size, context_length=context_length, device=device)
 
 
 def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, " ..."]:
