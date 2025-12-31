@@ -2,10 +2,40 @@ import regex as re
 import warnings
 import pickle
 from pathlib import Path
+from multiprocessing import Pool, cpu_count
+from collections import Counter
+
+def _rebuild_word(args):
+    """Worker function for parallel corpus rebuilding."""
+    word, merge_pair, merged_id = args
+    if len(word) < 2:
+        return word
+    new_word = []
+    i = 0
+    word_len = len(word)
+    while i < word_len:
+        if i < word_len - 1 and word[i] == merge_pair[0] and word[i+1] == merge_pair[1]:
+            new_word.append(merged_id)
+            i += 2
+        else:
+            new_word.append(word[i])
+            i += 1
+    return new_word
+
+
+def _count_pairs_chunk(args):
+    """Worker function for parallel pair frequency counting."""
+    word_chunk = args
+    pairs = []
+    for word in word_chunk:
+        pairs.extend(zip(word, word[1:]))
+    return Counter(pairs)
+
 
 class BPETokenizer:
-    def __init__(self, special_tokens: list[str] = []):
+    def __init__(self, special_tokens: list[str] = [], num_workers: int = 1):
         self.special_tokens = special_tokens
+        self.num_workers = num_workers if num_workers > 0 else cpu_count()
         self.vocabulary: dict[bytes, int] = {}
         self.reverseVocab: dict[int, bytes] = {}
         self.corpus: None | str = None
@@ -66,7 +96,7 @@ class BPETokenizer:
 
     def _pre_tokenize(self, input_str: str):
         PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-        if type(input_str) != str:
+        if type(input_str) is not str:
             raise ValueError("Input not found")
         if not self.special_tokens:
             chunks = [input_str]
@@ -83,11 +113,8 @@ class BPETokenizer:
                 token_id = self.vocabulary[token_bytes]
                 encoded_text.append([token_id])
                 continue
-
             tokens = re.findall(PAT, chunk)
-            for tok in tokens:
-                encoded = list(tok.encode("utf-8"))
-                encoded_text.append(encoded)
+            encoded_text.extend([list(tok.encode("utf-8")) for tok in tokens])
 
         return encoded_text
 
@@ -100,22 +127,33 @@ class BPETokenizer:
         self.reverseVocab = {v: k for k, v in self.vocabulary.items()}
 
     def _rebuild_corpus(self, merge_pair):
-        new_corpus = []
-        for word in self.tokenizedCorpus:
-            new_word = []
-            i = 0
-            while i < len(word):
-                if i < len(word) - 1:
-                    pair = (word[i], word[i+1])
-                    if pair == merge_pair:
-                        byte_string = self.reverseVocab[pair[0]] + self.reverseVocab[pair[1]]
-                        new_word.append(self.vocabulary[byte_string])
+        merged_bytes = self.reverseVocab[merge_pair[0]] + self.reverseVocab[merge_pair[1]]
+        merged_id = self.vocabulary[merged_bytes]
+
+        if self.num_workers > 1 and len(self.tokenizedCorpus) > 1000:
+            with Pool(self.num_workers) as pool:
+                new_corpus = pool.map(_rebuild_word, [(word, merge_pair, merged_id) for word in self.tokenizedCorpus])
+            self.tokenizedCorpus = new_corpus
+        else:
+            merge_left, merge_right = merge_pair
+            new_corpus = []
+            for word in self.tokenizedCorpus:
+                if len(word) < 2:
+                    new_corpus.append(word)
+                    continue
+
+                new_word = []
+                i = 0
+                word_len = len(word)
+                while i < word_len:
+                    if i < word_len - 1 and word[i] == merge_left and word[i+1] == merge_right:
+                        new_word.append(merged_id)
                         i += 2
-                        continue
-                new_word.append(word[i])
-                i += 1
-            new_corpus.append(new_word)
-        self.tokenizedCorpus = new_corpus
+                    else:
+                        new_word.append(word[i])
+                        i += 1
+                new_corpus.append(new_word)
+            self.tokenizedCorpus = new_corpus
 
     def _merge_bpe(self, input_enc: list):
         output = []
@@ -169,13 +207,22 @@ class BPETokenizer:
         
         self._initialize_training(input_path, vocab_size)
 
-        next_id = len(self.vocabulary)  
+        next_id = len(self.vocabulary)
         while True:
-            freq = {}
-            for word in self.tokenizedCorpus:
-                for index1, index2 in zip(word, word[1:]):
-                    pair = (index1, index2)
-                    freq[pair] = freq.get(pair, 0) + 1
+            if self.num_workers > 1 and len(self.tokenizedCorpus) > 1000:
+                chunk_size = len(self.tokenizedCorpus) // self.num_workers
+                chunks = [self.tokenizedCorpus[i:i+chunk_size] for i in range(0, len(self.tokenizedCorpus), chunk_size)]
+
+                with Pool(self.num_workers) as pool:
+                    freq_counters = pool.map(_count_pairs_chunk, chunks)
+                freq = Counter()
+                for counter in freq_counters:
+                    freq.update(counter)
+            else:
+                pairs = []
+                for word in self.tokenizedCorpus:
+                    pairs.extend(zip(word, word[1:]))
+                freq = Counter(pairs)
             candidates = (
                 (pair, count)
                 for pair, count in freq.items()
