@@ -43,7 +43,7 @@ def preprocess_data(
     if output_dir is None:
         output_dir = package_root / 'data/tokenized'
     else:
-        output_dir = package_root / output_dir
+        output_dir = package_root / 'data' / output_dir
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

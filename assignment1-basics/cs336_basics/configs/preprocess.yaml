@@ -1,0 +1,7 @@
+# Usage: python3 -m cs336_basics.inference.preprocess_config --config cs336_basics/configs/preprocess.yaml
+
+train_file: "/Users/shawnspitzel/cs336/cs326/assignment1-basics/cs336_basics/data/raw/train/TinyStoriesV2-GPT4-train.txt"
+val_file: "/Users/shawnspitzel/cs336/cs326/assignment1-basics/cs336_basics/data/raw/val/TinyStoriesV2-GPT4-valid.txt"
+vocab_size: 50257
+output_dir: "tokenized/tinystories"
+num_workers: 8
