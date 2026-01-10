@@ -8,11 +8,11 @@ import pstats
 import sys
 import traceback
 from tqdm import tqdm
-from cs336_basics.training.loader import data_loading, load_checkpoint, save_checkpoint
-from cs336_basics.model.optimizer import AdamW, SGDOptimizer
-from cs336_basics.model.transformer import Transformer
-from cs336_basics.model.loss import cross_entropy_loss, gradient_clipping, learning_rate_schedule
-from cs336_basics.utils.args import get_args_pretrain
+from src.training.loader import data_loading, load_checkpoint, save_checkpoint
+from src.model.optimizer import AdamW, SGDOptimizer
+from src.model.transformer import Transformer
+from src.model.loss import cross_entropy_loss, gradient_clipping, learning_rate_schedule
+from src.utils.args import get_args_pretrain
 
 
 def get_checkpoint_dir(params):

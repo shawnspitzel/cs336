@@ -6,6 +6,13 @@ __pycache__/
 # Data
 src/data*
 src/checkpoints/model/*
+cs336_spring2025_assignment1_basics.pdf
+cs336_spring2025_assignment2_systems.pdf
+
+# class stuff
+make_submission.sh
+test_and_make_submission.sh
+answers.md
 
 # C extensions
 *.so

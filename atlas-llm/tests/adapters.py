@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Type
 
 import torch
+import torch.nn as nn
+import torch.distributed as dist
 
 
 
@@ -52,8 +54,8 @@ def get_ddp_individual_parameters(module: torch.nn.Module) -> torch.nn.Module:
     Returns:
         Instance of a DDP class.
     """
-    # For example: return DDPIndividualParameters(module)
-    raise NotImplementedError
+    from src.training.distributed_pretrain import get_ddp_individual_parameters as impl
+    return impl(module)
 
 
 def ddp_individual_parameters_on_after_backward(ddp_model: torch.nn.Module, optimizer: torch.optim.Optimizer):
@@ -67,8 +69,8 @@ def ddp_individual_parameters_on_after_backward(ddp_model: torch.nn.Module, opti
         optimizer: torch.optim.Optimizer
             Optimizer being used with the DDP-wrapped model.
     """
-    # For example: ddp_model.finish_gradient_synchronization()
-    raise NotImplementedError
+    from src.training.distributed_pretrain import ddp_individual_parameters_on_after_backward as impl
+    impl(ddp_model, optimizer)
 
 
 def get_ddp_bucketed(module: torch.nn.Module, bucket_size_mb: float) -> torch.nn.Module:

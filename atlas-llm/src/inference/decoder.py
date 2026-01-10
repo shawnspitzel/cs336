@@ -15,7 +15,6 @@ def generate(
     generated = prompt_tokens.clone()
 
     assert generated.size(0) == 1, "generate() only supports batch_size=1"
-    # Get model device from first parameter
     model_device = next(model.parameters()).device
     assert generated.device == model_device, f"Input device {generated.device} doesn't match model device {model_device}"
     assert temperature > 0.0

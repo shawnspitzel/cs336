@@ -1,0 +1,7 @@
+- Profile current implementation
+    - Naive Attention vs FlashAttention
+    - Compile vs No-Compile
+- Implement FlashAttention
+- Quantize model to use F16 mixed-precision data types (torch.autocast())
+- Implement distributed training
+- Implement optimizer state sharding

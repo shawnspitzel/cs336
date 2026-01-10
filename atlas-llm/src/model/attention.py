@@ -3,6 +3,7 @@ from .util import Linear
 from .util import softmax
 from torch import Tensor
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 import math
 
@@ -61,8 +62,14 @@ class MultiHeadAttention(nn.Module):
             torch.ones(T, T, device=x.device, dtype=torch.bool)
         )
         causal_mask = causal_mask.unsqueeze(0)
-
-        out = SCPAttention(q, k, v, mask=causal_mask)
+        
+        # TODO: Benchmark naive attention with FlashAttention
+        
+        # Naive attention
+        # out = SCPAttention(q, k, v, mask=causal_mask) 
+            
+        # Flash Attention
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=causal_mask)
 
         out = out.view(B, h, T, d)
         out = out.transpose(1, 2).contiguous()  
